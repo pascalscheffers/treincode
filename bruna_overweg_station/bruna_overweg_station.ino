@@ -9,7 +9,7 @@
 /* Uitgangen */
 #define OVERWEG_G_PIN 10  
 #define OVERWEG_R_PIN 11
-#define OVERWEG_K_PIN 3
+#define OVERWEG_K_PIN 9
 #define OVERWEG_KK_PIN 12
 #define STATION_STOP_RELAY 7
 
@@ -26,7 +26,7 @@
 #define OVERWEG_KNIPPER_ONVERANDERD -1
 #define OVERWEG_KNIPPER_WIT 0
 #define OVERWEG_KNIPPER_ROOD 1
-#define RICHTING_LINKS HIGH
+#define RICHTING_LINKS LOW
 
 void setup() {
   // Alle pinnen op de juiste modus instellen:
@@ -40,20 +40,27 @@ void setup() {
   pinMode(REEDSW_B_PIN, INPUT_PULLUP);
   pinMode(REEDSW_C_PIN, INPUT_PULLUP);
   pinMode(BAANRICHTING_PIN, INPUT_PULLUP);
+  Serial.begin(115200);
+  Serial.println("Bruna Kerstspoor overweg & station controller gestart.");
+
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
   unsigned long nu = millis();
-  unsigned long treinGestopt = 0;
+  static unsigned long treinGestopt = 0;
   bool baanRichtingLinks = false;
   static bool vorigeBaanRichtingLinks = false;
   if (digitalRead(BAANRICHTING_PIN) == RICHTING_LINKS) {
     baanRichtingLinks = true;
   } 
-
   
   if (vorigeBaanRichtingLinks != baanRichtingLinks) {
+    if (baanRichtingLinks) {
+      Serial.println("Baanrichting nu links.");
+    } else {
+      Serial.println("Baanrichting nu rechts.");
+    }
     if (treinGestopt > 0) {
       // Dit is een watchdog functie. Dit is de enige echt vervelende als het mis gaat, dus reset het relais
       // als de baanrichting veranderd. 
@@ -66,6 +73,7 @@ void loop() {
   if (treinGestopt > 0 && nu - treinGestopt > STATION_WACHT_TIJD ) {
     digitalWrite(STATION_STOP_RELAY, LOW);
     treinGestopt = 0;
+    Serial.println("Trein vertrekt van station.");
     if (!baanRichtingLinks) {
       overwegBijwerken(nu, OVERWEG_KNIPPER_ROOD); 
     }
@@ -80,14 +88,17 @@ void loop() {
     if (digitalRead(REEDSW_B_PIN) == LOW) {
       overwegBijwerken(nu, OVERWEG_KNIPPER_WIT); 
     }
-    if (digitalRead(REEDSW_C_PIN) == LOW) {
+    if (treinGestopt == 0 && digitalRead(REEDSW_C_PIN) == LOW) {
       digitalWrite(STATION_STOP_RELAY, HIGH);
       treinGestopt = nu;
+      Serial.println("Reedswitch C: trein gestopt");
+      overwegBijwerken(nu, OVERWEG_KNIPPER_WIT); 
     }
   } else {
-    if (digitalRead(REEDSW_B_PIN) == LOW) {
+    if (treinGestopt==0 && digitalRead(REEDSW_B_PIN) == LOW) {
       digitalWrite(STATION_STOP_RELAY, HIGH);
       treinGestopt = nu;
+      Serial.println("Reedswitch B: trein gestopt");
     }
     if (digitalRead(REEDSW_A_PIN) == LOW) {
       overwegBijwerken(nu, OVERWEG_KNIPPER_WIT); 
@@ -109,8 +120,10 @@ void overwegBijwerken(unsigned long nu, char nieuweKnipperStand) {
     digitalWrite(OVERWEG_K_PIN, LOW);
     digitalWrite(OVERWEG_R_PIN, LOW);
     if (nieuweKnipperStand == OVERWEG_KNIPPER_WIT) {
+      Serial.println("Overweg: wit");
       digitalWrite(OVERWEG_KK_PIN, LOW);
     } else {
+      Serial.println("Overweg: rood");
       digitalWrite(OVERWEG_R_PIN, HIGH);
       digitalWrite(OVERWEG_KK_PIN, HIGH);
     }
