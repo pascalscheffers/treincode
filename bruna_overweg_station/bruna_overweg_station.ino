@@ -1,7 +1,43 @@
-
+/* Geschreven door Pascal Scheffers, september 2017. 
+ *
+ * Synopsis:
+ * Een circa 8 meter lange rechte treinbaan (DC) met wissel automaat:
+ * De wissel automaat staat ingesteld om de trein van links naar rechts en omgekeerd
+ * te laten rijden door elke X seconden de polariteit van de rails om te wisselen. 
+ * Bij de eindstukken is telkens 1 rails onderbroken door een diode, zodat de trein daar
+ * slechts een kant op kan rijden en dus betrouwbaar stopt.
+ * 
+ * De Arduino laat de overweg op het juiste moment knipperen en stopt de trein op het station.
+ * 
+ * De layout is alsvolgt:
+ * 
+ * LINKS----REEDSW_A---overweg--|-REEDSW_B--station--REEDSW_C-|------RECHTS
+ *
+ * Waar het stuk tussen de |---| onderbroken is en aangesloten is op de NC pins van een relais. 
+ * Hierdoor zal als de Arduino niets detecteerd of vast loopt de trein altijd blijven rijden.
+ * 
+ * Technisch is het eenvoudig om inplaats van de richting sensor, de Arduino ook de richting te laten 
+ * regelen met een wissel relais. 
+ *  
+ * Het programma is eenvoudig alsvolgt:
+ * Als de trein van links naar rechts rijdt: (richting_links=true)
+ * Bij REEDSW_A: overweg op rood
+ *     REEDSW_B: overweg op wit
+ *     REEDSW_C: stop trein voor STATION_WACHT_TIJD milliseconden
+ *     
+ * Als de trein van rechts naar links rijdt: (richting_links=false)
+ * Bij REEDSW_C: doe niets
+ *     REEDSW_B: 1. stop trein voor STATION_WACHT_TIJD milliseconden
+ *               2. zodra de trein gaat rijden, overweg op rood
+ *     REEDSW_A: Overweg wit.
+ *     
+ *     
+ *     
+ */
+ 
 // Timings
-#define OVERWEG_ROOD_INTERVAL 333 // miliseconden
-#define OVERWEG_WIT_SNELHEID 4 // tijd tussen fader stapjes.
+#define OVERWEG_ROOD_INTERVAL 333 // milliseconden
+#define OVERWEG_WIT_SNELHEID 4 // tijd tussen fader stapjes. Lager is sneller knipperen
 
 #define STATION_WACHT_TIJD 3500 // ms
 
