@@ -39,7 +39,7 @@
 #define OVERWEG_ROOD_INTERVAL 333 // milliseconden
 #define OVERWEG_WIT_SNELHEID 4 // tijd tussen fader stapjes. Lager is sneller knipperen
 
-#define STATION_WACHT_TIJD 3500 // ms
+#define STATION_WACHT_TIJD 7000 // ms
 
 /* Pin indeling */
 /* Uitgangen */
@@ -56,13 +56,13 @@
 #define REEDSW_C_PIN 5  // Tussen station en baaneinde
 
 // Opto coupler baanrichting sensor
-#define BAANRICHTING_PIN 6
+#define BAANRICHTING_PIN 3
 
 // Interne API constanten
 #define OVERWEG_KNIPPER_ONVERANDERD -1
 #define OVERWEG_KNIPPER_WIT 0
 #define OVERWEG_KNIPPER_ROOD 1
-#define RICHTING_LINKS LOW
+#define RICHTING_LINKS HIGH
 
 void setup() {
   // Alle pinnen op de juiste modus instellen:
@@ -87,6 +87,7 @@ void loop() {
   static unsigned long treinGestopt = 0;
   bool baanRichtingLinks = false;
   static bool vorigeBaanRichtingLinks = false;
+  static bool treinHeeftGestopt = false;
   if (digitalRead(BAANRICHTING_PIN) == RICHTING_LINKS) {
     baanRichtingLinks = true;
   } 
@@ -104,6 +105,8 @@ void loop() {
       treinGestopt = 0;
     }
     vorigeBaanRichtingLinks = baanRichtingLinks;
+    treinHeeftGestopt = false;
+    overwegBijwerken(nu, OVERWEG_KNIPPER_WIT); 
   }
 
   if (treinGestopt > 0 && nu - treinGestopt > STATION_WACHT_TIJD ) {
@@ -119,24 +122,31 @@ void loop() {
   if (digitalRead(BAANRICHTING_PIN) == RICHTING_LINKS) {
     // Trein gaat van links naar rechts.
     if (digitalRead(REEDSW_A_PIN) == LOW) {
+      //Serial.print("A");
       overwegBijwerken(nu, OVERWEG_KNIPPER_ROOD); 
     }
     if (digitalRead(REEDSW_B_PIN) == LOW) {
+      //Serial.print("B");
       overwegBijwerken(nu, OVERWEG_KNIPPER_WIT); 
     }
-    if (treinGestopt == 0 && digitalRead(REEDSW_C_PIN) == LOW) {
+    if (!treinHeeftGestopt && treinGestopt == 0 && digitalRead(REEDSW_C_PIN) == LOW) {
+      //Serial.print("C");
       digitalWrite(STATION_STOP_RELAY, HIGH);
       treinGestopt = nu;
+      treinHeeftGestopt = true;
       Serial.println("Reedswitch C: trein gestopt");
       overwegBijwerken(nu, OVERWEG_KNIPPER_WIT); 
     }
   } else {
-    if (treinGestopt==0 && digitalRead(REEDSW_B_PIN) == LOW) {
+    if (!treinHeeftGestopt && treinGestopt==0 && digitalRead(REEDSW_B_PIN) == LOW) {
+      //Serial.print("B");
       digitalWrite(STATION_STOP_RELAY, HIGH);
       treinGestopt = nu;
+      treinHeeftGestopt=true;
       Serial.println("Reedswitch B: trein gestopt");
     }
     if (digitalRead(REEDSW_A_PIN) == LOW) {
+      //Serial.print("A");
       overwegBijwerken(nu, OVERWEG_KNIPPER_WIT); 
     }
   }
@@ -168,9 +178,9 @@ void overwegBijwerken(unsigned long nu, char nieuweKnipperStand) {
   }
   unsigned long knipperDuur = nu - laatsteKnipper;
   if (knipperStand == OVERWEG_KNIPPER_WIT) {
-    if (witIntensiteit > 250) {
+    if (witIntensiteit > 235) {
       witRichting = -1*2;
-    } else if (witIntensiteit < 20) {
+    } else if (witIntensiteit < 5) {
       witRichting = 1*2;
     }
     if (knipperDuur > OVERWEG_WIT_SNELHEID) {
