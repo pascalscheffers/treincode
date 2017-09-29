@@ -12,7 +12,18 @@
  * De layout is alsvolgt:
  * 
  * LINKS----REEDSW_A---overweg--|-REEDSW_B--station--REEDSW_C-|------RECHTS
+ * 
+ * Lengtes:
+ * Links naar rechts: 545 cm
+ * Links naar A: 171 cm (inv. 216)
+ *            | 31cm
+ * Links naar B: 298 cm (inv. 247)
+ *            | 127cm
+ * Links naar C: 329 cm (inv. 374)
+ *            | 216cm
+ * Naar Rechts  545cm   
  *
+ * 
  * Waar het stuk tussen de |---| onderbroken is en aangesloten is op de NC pins van een relais. 
  * Hierdoor zal als de Arduino niets detecteerd of vast loopt de trein altijd blijven rijden.
  * 
@@ -38,6 +49,7 @@
 // Timings
 #define OVERWEG_ROOD_INTERVAL 333 // milliseconden
 #define OVERWEG_WIT_SNELHEID 4 // tijd tussen fader stapjes. Lager is sneller knipperen
+#define OVERWEG_WIT_FREQUENTIE 1500 // tijd voor een hele knipper cyclus.
 
 #define STATION_WACHT_TIJD 7000 // ms
 
@@ -63,6 +75,9 @@
 #define OVERWEG_KNIPPER_WIT 0
 #define OVERWEG_KNIPPER_ROOD 1
 #define RICHTING_LINKS HIGH
+
+
+
 
 void setup() {
   // Alle pinnen op de juiste modus instellen:
@@ -155,6 +170,9 @@ void loop() {
 
 
 void overwegBijwerken(unsigned long nu, char nieuweKnipperStand) {
+  
+
+  
   static unsigned long laatsteKnipper=0;
   static char witRichting = 1;
   static unsigned char witIntensiteit=20;
@@ -178,6 +196,20 @@ void overwegBijwerken(unsigned long nu, char nieuweKnipperStand) {
   }
   unsigned long knipperDuur = nu - laatsteKnipper;
   if (knipperStand == OVERWEG_KNIPPER_WIT) {
+    float periodeStap = nu % OVERWEG_WIT_FREQUENTIE; // % is modulo.
+    periodeStap = 2* M_PI * (periodeStap/OVERWEG_WIT_FREQUENTIE); 
+    float nieuwWitF = abs((sin(periodeStap)+1)/2)*254;
+    if (nieuwWitF > 240) nieuwWitF=255;
+    //if (nieuwWitF < 3) nieuwWitF=3;
+    
+    int nieuwWit = (int)nieuwWitF;
+    //Serial.println(sin(periodeStap), "%f");
+    //Serial.println(nieuwWit, "%d");
+    if (nieuwWit != witIntensiteit) {
+      witIntensiteit = nieuwWit;
+      analogWrite(OVERWEG_K_PIN,witIntensiteit);
+    }
+    /*
     if (witIntensiteit > 235) {
       witRichting = -1*2;
     } else if (witIntensiteit < 5) {
@@ -187,7 +219,7 @@ void overwegBijwerken(unsigned long nu, char nieuweKnipperStand) {
       witIntensiteit += witRichting;
       analogWrite(OVERWEG_K_PIN,witIntensiteit);
       laatsteKnipper = nu;
-    }
+    }*/
   } else {
     if (knipperDuur > OVERWEG_ROOD_INTERVAL) {
       if (roodWissel) {
